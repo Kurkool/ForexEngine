@@ -3,6 +3,7 @@ package com.exchange;
 import java.math.*;
 import java.time.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import com.exchange.model.*;
 
@@ -22,7 +23,20 @@ class ForexEngine {
 	 * @throws QuoteOutdatedException when passed quoteTime is older than the one already stored in the rates map
 	 */
 	BigDecimal update(Pair pair, BigDecimal exchangeRate, ZonedDateTime quoteTime) throws QuoteOutdatedException {
-		throw new UnsupportedOperationException("Please, implement me");
+//		throw new UnsupportedOperationException("Please, implement me");
+		if(rates.containsKey(pair)){
+			if(quoteTime.compareTo(rates.get(pair).getQuoteTime()) < 0){
+				throw new QuoteOutdatedException();
+			}
+			else{
+				List<Pair> pairList = rates.keySet().stream().sorted().collect(Collectors.toList());
+				BigDecimal lastestRate = rates.get(pairList.get(pairList.size()-1)).getExchangeRate();
+				return exchangeRate.subtract(lastestRate);
+			}
+		}else{
+			rates.put(pair,new Bid(exchangeRate,quoteTime));
+			return BigDecimal.ZERO;
+		}
 	}
 
 	/**
@@ -32,7 +46,9 @@ class ForexEngine {
 	 * @throws RateUnavailableException when no rate for the given pair is available
 	 */
 	BigDecimal getExchangeRate(Pair pair) throws RateUnavailableException {
-		return Optional.ofNullable(rates.get(pair)).map(Bid::getExchangeRate).orElseThrow(RateUnavailableException::new);
+		return Optional.ofNullable(rates.get(pair))
+				.map(Bid::getExchangeRate)
+				.orElseThrow(RateUnavailableException::new);
 	}
 
 }
